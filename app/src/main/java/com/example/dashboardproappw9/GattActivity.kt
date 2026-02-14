@@ -1,10 +1,13 @@
 package com.example.dashboardproappw9
 
 import android.Manifest
-import android.bluetooth.*
-import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothManager
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.ArrayAdapter
@@ -13,19 +16,19 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import java.util.*
 
 class GattActivity : AppCompatActivity() {
 
     private var bluetoothGatt: BluetoothGatt? = null
     private lateinit var listView: ListView
+    private lateinit var statusView: TextView
     private lateinit var adapter: ArrayAdapter<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gatt)
 
-        val statusView = findViewById<TextView>(R.id.tvGattStatus)
+        statusView = findViewById(R.id.tvGattStatus)
         listView = findViewById(R.id.listGatt)
 
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
@@ -33,41 +36,36 @@ class GattActivity : AppCompatActivity() {
 
         val mac = intent.getStringExtra("MAC")
         if (mac != null) {
-            val bluetoothAdapter = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
-
-            val device = bluetoothAdapter.getRemoteDevice(mac)
+            val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+            val bluetoothAdapter = bluetoothManager.adapter
 
             if (ActivityCompat.checkSelfPermission(
                     this,
                     Manifest.permission.BLUETOOTH_CONNECT
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // request if needed
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 1)
                 return
             }
 
-            statusView.text = "Connecting..."
+            statusView.text = "Connecting to BLE device..."
+            val device = bluetoothAdapter.getRemoteDevice(mac)
 
             bluetoothGatt = device.connectGatt(this, false, gattCallback)
+        } else {
+            statusView.text = "Device MAC not found!"
         }
     }
 
-    // GATT Callback
     private val gattCallback = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             runOnUiThread {
-                Log.d("BLE", "State changed: $status $newState")
-            }
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                runOnUiThread {
-                    Toast.makeText(this@GattActivity, "Connected GATT", Toast.LENGTH_SHORT).show()
-                }
-                bluetoothGatt?.discoverServices()
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                runOnUiThread {
-                    Toast.makeText(this@GattActivity, "Disconnected GATT", Toast.LENGTH_SHORT).show()
+                if (newState == BluetoothAdapter.STATE_CONNECTED) {
+                    statusView.text = "Connected! Discovering services..."
+                    bluetoothGatt?.discoverServices()
+                } else {
+                    statusView.text = "Disconnected from device"
                 }
             }
         }
@@ -77,19 +75,24 @@ class GattActivity : AppCompatActivity() {
 
             runOnUiThread {
                 adapter.clear()
-                adapter.add("=== Services Discovered ===")
+                adapter.add("=== Services & Characteristics ===")
             }
 
-            bluetoothGatt?.services?.forEach { svc ->
-                runOnUiThread {
-                    adapter.add("Service: ${svc.uuid}")
-                }
+            for (service in gatt.services) {
+                displayService(service)
+            }
+        }
+    }
 
-                svc.characteristics.forEach { chr ->
-                    runOnUiThread {
-                        adapter.add("  Characteristic: ${chr.uuid}  (${getProperties(chr.properties)})")
-                    }
-                }
+    private fun displayService(service: BluetoothGattService) {
+        runOnUiThread {
+            adapter.add("Service: ${service.uuid}")
+        }
+
+        for (characteristic in service.characteristics) {
+            val props = getProperties(characteristic.properties)
+            runOnUiThread {
+                adapter.add("  Char: ${characteristic.uuid} ($props)")
             }
         }
     }
