@@ -3,35 +3,27 @@ package com.example.dashboardproappw9
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
-        // Crash handler
-        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
-            val intent = Intent(this, CrashActivity::class.java)
-            intent.putExtra("error", buildString {
-                appendLine("Exception: ${throwable.javaClass.simpleName}")
-                appendLine("Message: ${throwable.message}")
-                appendLine()
-                appendLine("Stacktrace:")
-                throwable.stackTrace.forEach {
-                    appendLine(it.toString())
-                }
-            })
-            startActivity(intent)
-            finish()
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
 
-        // Button to trigger next
-        val btn = Button(this).apply { text = "Start Scan" }
-        btn.setOnClickListener {
-            startActivity(Intent(this, ScanActivity::class.java))
+        val btnScan = Button(this).apply {
+            text = "START SCAN BLE"
+            setOnClickListener {
+                val intent = Intent(this@MainActivity, ScanActivity::class.java)
+                startActivity(intent)
+            }
         }
-        setContentView(btn)
+
+        layout.addView(btnScan)
+        setContentView(layout)
     }
 }
