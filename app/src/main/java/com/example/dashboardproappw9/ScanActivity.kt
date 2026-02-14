@@ -13,24 +13,24 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
 class ScanActivity : AppCompatActivity() {
 
-    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private lateinit var bleScanner: BluetoothLeScanner
 
     private val devices = mutableListOf<android.bluetooth.BluetoothDevice>()
     private lateinit var adapter: ArrayAdapter<String>
-    private lateinit var listView: ListView  // <-- globalne pole
+    private lateinit var listView: ListView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Tworzymy dynamiczny layout
-        val btnScan = Button(this).apply { text = "Skanuj BLE" }
-        listView = ListView(this)  // <-- teraz dostępne w całej klasie
+        val btnScan = Button(this).apply { text = "Rozpocznij skanowanie" }
+        listView = ListView(this)
 
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
         listView.adapter = adapter
@@ -40,45 +40,67 @@ class ScanActivity : AppCompatActivity() {
             addView(btnScan)
             addView(listView)
         }
-
         setContentView(layout)
 
-        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
+        if (bluetoothAdapter == null) {
+            Toast.makeText(this, "Urządzenie nie obsługuje Bluetooth!", Toast.LENGTH_LONG).show()
+            return
+        }
+
         bleScanner = bluetoothAdapter.bluetoothLeScanner
 
         btnScan.setOnClickListener {
-            checkPermissionsAndScan()
-        }
-
-        listView.setOnItemClickListener { _, _, position, _ ->
-            val device = devices[position]
-            Toast.makeText(this, "Wybrano: ${device.name}", Toast.LENGTH_SHORT).show()
-
-            // Przejście do GattActivity z MAC adresu
-            val intent = Intent(this, GattActivity::class.java)
-            intent.putExtra("MAC", device.address)
-            startActivity(intent)
+            checkBluetoothAndPermissions()
         }
     }
 
-    private fun checkPermissionsAndScan() {
-        val permissions = mutableListOf<String>()
+    private fun checkBluetoothAndPermissions() {
+        // Bluetooth off?
+        if (bluetoothAdapter?.isEnabled == false) {
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            startActivityForResult(enableBtIntent, 1)
+            return
+        }
+
+        // Missing permissions?
+        val needed = mutableListOf<String>()
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            needed.add(Manifest.permission.BLUETOOTH_SCAN)
         }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            needed.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
-        if (permissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1)
+        if (needed.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, needed.toTypedArray(), 2)
         } else {
             startBleScan()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == 2) {
+            val denied = grantResults.any { it != PackageManager.PERMISSION_GRANTED }
+            if (denied) {
+                AlertDialog.Builder(this)
+                    .setTitle("Uprawnienia wymagane")
+                    .setMessage("Aplikacja potrzebuje uprawnień do Bluetooth i lokalizacji, aby skanować urządzenia.")
+                    .setPositiveButton("Dalej") { _, _ -> checkBluetoothAndPermissions() }
+                    .setNegativeButton("Anuluj", null)
+                    .show()
+            } else {
+                startBleScan()
+            }
         }
     }
 
@@ -92,7 +114,7 @@ class ScanActivity : AppCompatActivity() {
         listView.postDelayed({
             bleScanner.stopScan(scanCallback)
             Toast.makeText(this, "Skanowanie zakończone", Toast.LENGTH_SHORT).show()
-        }, 8000)
+        }, 10000)
     }
 
     private val scanCallback = object : ScanCallback() {
