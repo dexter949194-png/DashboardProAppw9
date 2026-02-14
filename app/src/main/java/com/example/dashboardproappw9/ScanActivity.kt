@@ -3,13 +3,11 @@ package com.example.dashboardproappw9
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
+import android.bluetooth.le.*
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
@@ -51,7 +49,7 @@ class ScanActivity : AppCompatActivity() {
 
         listView.setOnItemClickListener { _, _, position, _ ->
             val device = devices[position]
-            connectToDevice(device)
+            showDeviceServices(device)
         }
     }
 
@@ -77,12 +75,7 @@ class ScanActivity : AppCompatActivity() {
 
         bleScanner.startScan(scanCallback)
         Toast.makeText(this, "Skanowanie BLE...", Toast.LENGTH_SHORT).show()
-
-        // stop after 10s
-        listView.postDelayed({
-            bleScanner.stopScan(scanCallback)
-            Toast.makeText(this, "Skanowanie zakończone", Toast.LENGTH_SHORT).show()
-        }, 10000)
+        listView.postDelayed({ bleScanner.stopScan(scanCallback) }, 10000)
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -97,10 +90,10 @@ class ScanActivity : AppCompatActivity() {
         }
     }
 
-    private fun connectToDevice(device: BluetoothDevice) {
-        Toast.makeText(this, "Wybrano: ${device.name}", Toast.LENGTH_SHORT).show()
+    private fun showDeviceServices(device: BluetoothDevice) {
+        Toast.makeText(this, "Odkrywanie usług...", Toast.LENGTH_SHORT).show()
 
-        val intent = Intent(this, DeviceActivity::class.java)
+        val intent = Intent(this, GattActivity::class.java)
         intent.putExtra("MAC", device.address)
         startActivity(intent)
     }
