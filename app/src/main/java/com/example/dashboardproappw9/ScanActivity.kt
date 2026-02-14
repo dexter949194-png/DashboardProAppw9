@@ -23,14 +23,14 @@ class ScanActivity : AppCompatActivity() {
 
     private val devices = mutableListOf<android.bluetooth.BluetoothDevice>()
     private lateinit var adapter: ArrayAdapter<String>
-    private lateinit var listView: ListView  // <-- przenosimy je tutaj
+    private lateinit var listView: ListView  // <-- globalne pole
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // dynamiczny layout
+        // Tworzymy dynamiczny layout
         val btnScan = Button(this).apply { text = "Skanuj BLE" }
-        listView = ListView(this)
+        listView = ListView(this)  // <-- teraz dostępne w całej klasie
 
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
         listView.adapter = adapter
@@ -54,7 +54,8 @@ class ScanActivity : AppCompatActivity() {
         listView.setOnItemClickListener { _, _, position, _ ->
             val device = devices[position]
             Toast.makeText(this, "Wybrano: ${device.name}", Toast.LENGTH_SHORT).show()
-            // tutaj możesz potem otworzyć GattActivity, podając MAC
+
+            // Przejście do GattActivity z MAC adresu
             val intent = Intent(this, GattActivity::class.java)
             intent.putExtra("MAC", device.address)
             startActivity(intent)
