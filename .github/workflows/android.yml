@@ -23,7 +23,7 @@ jobs:
         run: |
           wget https://services.gradle.org/distributions/gradle-8.2-bin.zip
           unzip gradle-8.2-bin.zip
-          echo "::add-path::$PWD/gradle-8.2/bin"
+          echo "$PWD/gradle-8.2/bin" >> $GITHUB_PATH
 
       - name: Build Debug APK
         run: gradle :app:assembleDebug
