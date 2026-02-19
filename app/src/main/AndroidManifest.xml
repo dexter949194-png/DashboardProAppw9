@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.dashboardproappw9">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- uprawnienia Bluetooth i lokalizacji -->
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
@@ -12,14 +10,12 @@
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
 
-        <!-- ekran błędu jeśli crash -->
-        <activity
-            android:name=".CrashActivity"
-            android:exported="false"/>
+        <activity android:name=".GattActivity"/>
+        <activity android:name=".ScanActivity"/>
 
-        <!-- główny start aplikacji -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -29,16 +25,5 @@
             </intent-filter>
         </activity>
 
-        <!-- ScanActivity -->
-        <activity
-            android:name=".ScanActivity"
-            android:exported="false"/>
-
-        <!-- GattActivity -->
-        <activity
-            android:name=".GattActivity"
-            android:exported="false"/>
-
     </application>
-
 </manifest>
